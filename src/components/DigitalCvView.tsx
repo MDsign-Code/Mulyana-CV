@@ -1,0 +1,559 @@
+import React, { useMemo, useState } from 'react';
+import {
+  ArrowUpRight,
+  Award,
+  Check,
+  Download,
+  ExternalLink,
+  FileText,
+  Mail,
+  MapPin,
+  Phone,
+  X,
+} from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import {
+  MULYANA_ABILITIES,
+  MULYANA_CONTACT,
+  MULYANA_EXPERIENCE,
+  MULYANA_LANGUAGES,
+  MULYANA_SKILLS,
+} from '../data/mulyanaCvData';
+import { usePortfolio } from '../context/PortfolioContext';
+import type { PortfolioCategory, PortfolioItemData } from '../types';
+import { exportDigitalCvToPdf } from '../utils/exportUtils';
+
+const CATEGORIES: Array<'All' | PortfolioCategory> = [
+  'All',
+  'Packaging',
+  'Company Profile',
+  'Booth & Exhibition',
+  'Brochure & Print',
+  'Branding & Logo',
+];
+
+export const DigitalCvView: React.FC = () => {
+  const { profile, portfolioItems, trackPublicInteraction } = usePortfolio();
+  const [selectedCategory, setSelectedCategory] = useState<'All' | PortfolioCategory>('All');
+  const [lightboxItem, setLightboxItem] = useState<PortfolioItemData | null>(null);
+
+  const filteredItems = useMemo(() => {
+    if (selectedCategory === 'All') return portfolioItems;
+    return portfolioItems.filter((item) => item.category === selectedCategory);
+  }, [portfolioItems, selectedCategory]);
+
+  const handleExportPdf = () => {
+    trackPublicInteraction('Download Digital CV (PDF)');
+    exportDigitalCvToPdf(
+      profile,
+      MULYANA_EXPERIENCE,
+      MULYANA_SKILLS,
+      MULYANA_ABILITIES,
+      portfolioItems
+    );
+  };
+
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLightboxItem(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const qrTargets = [
+    {
+      label: 'Behance Portfolio',
+      handle: profile.behanceUrl.replace(/^https?:\/\/(www\.)?/, ''),
+      url: profile.behanceUrl,
+    },
+    {
+      label: 'LinkedIn Profile',
+      handle: profile.linkedinUrl.replace(/^https?:\/\/(www\.)?/, ''),
+      url: profile.linkedinUrl,
+    },
+    {
+      label: 'Instagram Studio',
+      handle: profile.instagramUrl.replace(/^https?:\/\/(www\.)?/, ''),
+      url: profile.instagramUrl,
+    },
+  ];
+
+  return (
+    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 space-y-16">
+      {/* Split Hero Section */}
+      <section
+        id="profile"
+        className="scroll-mt-20 grid grid-cols-1 gap-10 lg:grid-cols-12 lg:items-stretch"
+      >
+        <div className="flex flex-col justify-between lg:col-span-7 space-y-8">
+          <div className="space-y-5">
+            <div className="flex items-center gap-3">
+              <img
+                src={MULYANA_CONTACT.logoUrl}
+                alt="Mulyana D-Zign Logo"
+                className="h-10 w-10 rounded-lg border border-[#2B3449] bg-[#1D2435] object-contain p-1"
+                referrerPolicy="no-referrer"
+              />
+              <p className="text-xs font-medium tracking-wide text-amber-400">
+                {profile.brandName} · {profile.location}
+              </p>
+            </div>
+
+            <h1 className="font-display text-4xl font-bold tracking-tight text-white sm:text-5xl text-balance">
+              <span className="text-[#F58220]">{profile.fullName}</span> — {profile.tagline}
+            </h1>
+
+            <p className="text-base leading-relaxed text-slate-300 max-w-2xl">
+              {profile.bio}
+            </p>
+
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-300 pt-1">
+              <a
+                href={`mailto:${MULYANA_CONTACT.email}`}
+                className="inline-flex items-center gap-1.5 hover:text-amber-400 transition-colors"
+              >
+                <Mail className="h-4 w-4 text-emerald-400" />
+                <span>{MULYANA_CONTACT.email}</span>
+              </a>
+              <span aria-hidden="true" className="text-slate-600">
+                /
+              </span>
+              <a
+                href={MULYANA_CONTACT.whatsapp}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 hover:text-amber-400 transition-colors font-mono-tabular"
+              >
+                <Phone className="h-4 w-4 text-emerald-400" />
+                <span>{MULYANA_CONTACT.phone}</span>
+              </a>
+              <span aria-hidden="true" className="text-slate-600">
+                /
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <MapPin className="h-4 w-4 text-emerald-400" />
+                <span>{profile.location}</span>
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 pt-2">
+            <button
+              type="button"
+              onClick={handleExportPdf}
+              className="inline-flex h-11 items-center gap-2 rounded-lg bg-[#F58220] px-5 py-2.5 text-sm font-semibold text-slate-950 transition-colors hover:bg-amber-400 whitespace-nowrap shrink-0"
+            >
+              <Download className="h-4 w-4" />
+              <span>Download Digital CV (PDF)</span>
+            </button>
+
+            <a
+              href={MULYANA_CONTACT.originalCvPdfUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-11 items-center gap-2 rounded-lg border border-[#2B3449] bg-[#1D2435] px-5 py-2.5 text-sm font-medium text-slate-200 transition-colors hover:border-slate-500 hover:text-white whitespace-nowrap shrink-0"
+            >
+              <FileText className="h-4 w-4" />
+              <span>View Original CV (PDF)</span>
+            </a>
+
+            <div className="flex items-center gap-4 pl-2 text-sm font-medium text-slate-300">
+              <a
+                href={profile.linkedinUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 hover:text-amber-400 transition-colors whitespace-nowrap"
+              >
+                <span>LinkedIn</span>
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </a>
+              <a
+                href={profile.behanceUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 hover:text-amber-400 transition-colors whitespace-nowrap"
+              >
+                <span>Behance</span>
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </a>
+              <a
+                href={profile.instagramUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 hover:text-amber-400 transition-colors whitespace-nowrap"
+              >
+                <span>Instagram</span>
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Right visual showcase matching height */}
+        <div className="lg:col-span-5">
+          <div className="relative h-full min-h-[340px] overflow-hidden rounded-2xl border border-[#2B3449] bg-[#1D2435]">
+            <img
+              src={MULYANA_CONTACT.portraitUrl}
+              alt="Portrait of Mulyana, Graphic Designer"
+              className="h-full w-full object-cover object-top"
+              referrerPolicy="no-referrer"
+            />
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#11151F]/95 via-[#11151F]/65 to-transparent p-6 text-white">
+              <p className="text-xs font-medium text-amber-400">
+                Graphic Designer · Publishing & Branding
+              </p>
+              <p className="mt-1 font-display text-xl font-semibold">
+                {profile.headline}
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Full-width 3-column Proof Strip below Hero */}
+      <section className="grid grid-cols-1 divide-y divide-[#2B3449] rounded-2xl border border-[#2B3449] bg-[#1D2435] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <div className="p-6">
+          <p className="text-xs font-medium text-slate-400">Industry Experience</p>
+          <p className="mt-2 font-mono-tabular text-3xl font-semibold text-white">
+            {profile.yearsExperience}+ yrs
+          </p>
+          <p className="mt-1 text-xs text-slate-400">Since Feb 2007 across publishing & agencies</p>
+        </div>
+        <div className="p-6">
+          <p className="text-xs font-medium text-slate-400">Award-Winning Track Record</p>
+          <p className="mt-2 font-mono-tabular text-3xl font-semibold text-[#F58220]">
+            {profile.awardsCount}+
+          </p>
+          <p className="mt-1 text-xs text-slate-400">International design contest victories</p>
+        </div>
+        <div className="p-6">
+          <p className="text-xs font-medium text-slate-400">Core Specializations</p>
+          <p className="mt-2 font-display text-xl font-semibold text-white leading-snug">
+            Advertising, Book Design, Packaging
+          </p>
+          <p className="mt-1.5 text-xs text-slate-400">
+            Print, Amazon KDP, EPUB & commercial branding
+          </p>
+        </div>
+      </section>
+
+      {/* Experience & Capabilities Two-Column Layout */}
+      <section className="grid grid-cols-1 gap-12 lg:grid-cols-12">
+        <div id="experience" className="scroll-mt-20 lg:col-span-7 space-y-6">
+          <div className="border-b border-[#2B3449] pb-4">
+            <h2 className="font-display text-2xl font-semibold text-white">
+              Professional Experience
+            </h2>
+            <p className="mt-1 text-sm text-slate-400">
+              Career journey across publishing houses, advertising agencies, entertainment venues, and global clients.
+            </p>
+          </div>
+
+          <div className="divide-y divide-[#2B3449]">
+            {MULYANA_EXPERIENCE.map((exp) => (
+              <article key={exp.id} className="py-6 first:pt-2">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <h3 className="font-display text-lg font-semibold text-amber-400">
+                    {exp.company}
+                  </h3>
+                  <span className="font-mono-tabular text-xs font-medium text-slate-300">
+                    {exp.period}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm font-medium text-slate-200">
+                  {exp.role} · <span className="text-slate-400 font-normal">{exp.location}</span>
+                </p>
+                <p className="mt-3 text-sm leading-relaxed text-slate-300">{exp.summary}</p>
+                <ul className="mt-3 space-y-1.5">
+                  {exp.highlights.map((hl, i) => (
+                    <li key={i} className="flex items-start gap-2 text-xs text-slate-300">
+                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#F58220]" />
+                      <span>{hl}</span>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+        </div>
+
+        {/* Right Column: Tools, Abilities & Languages */}
+        <div id="skills" className="scroll-mt-20 lg:col-span-5 space-y-8">
+          <div className="rounded-2xl border border-[#2B3449] bg-[#1D2435] p-6 space-y-6">
+            <div>
+              <h2 className="font-display text-xl font-semibold text-white">
+                Tools & Production Proficiency
+              </h2>
+              <p className="mt-1 text-xs text-slate-400">
+                Print production, KDP book interiors, EPUB formats, 3D packaging, and executive decks.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {MULYANA_SKILLS.map((skill) => (
+                <div key={skill.name}>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium text-slate-100">{skill.name}</span>
+                    <span className="font-mono-tabular text-xs text-slate-400">
+                      {skill.level}%
+                    </span>
+                  </div>
+                  <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-[#2B3449]">
+                    <div
+                      className="h-full rounded-full bg-emerald-400"
+                      style={{ width: `${skill.level}%` }}
+                    />
+                  </div>
+                  <p className="mt-1 text-[11px] text-slate-400">{skill.category}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-[#2B3449] bg-[#1D2435] p-6 space-y-5">
+            <div>
+              <h3 className="font-display text-lg font-semibold text-white">
+                Core Services & Capabilities
+              </h3>
+              <p className="mt-1 text-xs text-slate-400">
+                End-to-end visual design solutions for publishing, branding, and marketing.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+              {MULYANA_ABILITIES.map((ability, idx) => (
+                <div
+                  key={ability}
+                  className="flex items-center gap-2.5 border-b border-[#2B3449] pb-2 text-sm text-slate-200"
+                >
+                  <span className="font-mono-tabular text-xs text-[#F58220]">
+                    {String(idx + 1).padStart(2, '0')}.
+                  </span>
+                  <span>{ability}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-2 border-t border-[#2B3449]">
+              <p className="text-xs font-medium text-slate-400 mb-2">Languages</p>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-100">
+                {MULYANA_LANGUAGES.map((lang, idx) => (
+                  <React.Fragment key={lang.name}>
+                    <span>
+                      {lang.name}{' '}
+                      <span className="text-xs text-slate-400">({lang.proficiency})</span>
+                    </span>
+                    {idx < MULYANA_LANGUAGES.length - 1 && (
+                      <span aria-hidden="true" className="text-slate-600">
+                        ·
+                      </span>
+                    )}
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Portfolio Works Gallery with Bento Grid & Lightbox */}
+      <section id="portfolio" className="scroll-mt-20 space-y-6">
+        <div className="flex flex-col gap-4 border-b border-[#2B3449] pb-5 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h2 className="font-display text-2xl font-semibold text-white">
+              Selected Works & Case Studies
+            </h2>
+            <p className="mt-1 text-sm text-slate-400">
+              Synchronized packaging, corporate profiles, exhibition booths, and print collateral.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1 rounded-lg bg-[#1D2435] border border-[#2B3449] p-1">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setSelectedCategory(cat)}
+                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
+                  selectedCategory === cat
+                    ? 'bg-[#F58220] text-slate-950 font-semibold'
+                    : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {filteredItems.map((item, idx) => (
+            <article
+              key={item.id}
+              onClick={() => {
+                setLightboxItem(item);
+                trackPublicInteraction(item.title);
+              }}
+              className={`group cursor-pointer overflow-hidden rounded-2xl border border-[#2B3449] bg-[#1D2435] transition-colors hover:border-amber-500/50 ${
+                idx === 0 && filteredItems.length >= 4 ? 'md:col-span-2 lg:col-span-2' : ''
+              }`}
+            >
+              <div
+                className={`relative overflow-hidden bg-[#121722] ${
+                  idx === 0 && filteredItems.length >= 4 ? 'aspect-[16/9]' : 'aspect-[4/3]'
+                }`}
+              >
+                <img
+                  src={item.imageUrl}
+                  alt={item.title}
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+
+              <div className="p-6">
+                <div className="flex items-center gap-2 text-xs text-slate-400">
+                  <span className="font-medium text-amber-400">{item.category}</span>
+                  <span aria-hidden="true">·</span>
+                  <span>{item.sourcePlatform}</span>
+                  <span aria-hidden="true">·</span>
+                  <span className="font-mono-tabular">{item.year}</span>
+                </div>
+
+                <h3 className="mt-2 font-display text-lg font-semibold text-white group-hover:text-amber-400 transition-colors">
+                  {item.title}
+                </h3>
+
+                <p className="mt-1 text-xs font-medium text-slate-400">{item.client}</p>
+                <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-slate-300">
+                  {item.description}
+                </p>
+
+                <div className="mt-4 flex items-center justify-between border-t border-[#2B3449] pt-3 text-xs text-slate-400 font-mono-tabular">
+                  <span>
+                    {item.views.toLocaleString('en-US')} views · {item.likes} likes
+                  </span>
+                  <span className="inline-flex items-center gap-1 font-sans font-medium text-slate-200 group-hover:text-amber-400">
+                    View Details
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  </span>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* Scan to My Portfolio (QR Codes matching CV Page 2) */}
+      <section className="rounded-2xl border border-[#2B3449] bg-[#1D2435] p-8">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-lg space-y-2">
+            <div className="inline-flex items-center gap-2 text-xs font-medium text-amber-400">
+              <Award className="h-4 w-4" />
+              <span>100+ Award-Winning Designs · Instant Network Access</span>
+            </div>
+            <h2 className="font-display text-2xl font-semibold text-white">
+              Scan or Click for another Portfolio
+            </h2>
+            <p className="text-sm leading-relaxed text-slate-300">
+              Recruiters and clients can scan these QR codes or click any card to jump directly to Mulyana D-Zign profiles on Behance, LinkedIn, or Instagram.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+            {qrTargets.map((qr) => (
+              <a
+                key={qr.label}
+                href={qr.url}
+                target="_blank"
+                rel="noreferrer"
+                className="flex flex-col items-center rounded-xl border border-[#2B3449] bg-[#161B26] p-4 text-center transition-colors hover:border-amber-500/60"
+              >
+                <div className="rounded-lg bg-white p-2.5">
+                  <QRCodeSVG value={qr.url} size={96} level="M" />
+                </div>
+                <p className="mt-3 text-xs font-semibold text-white">{qr.label}</p>
+                <p className="mt-0.5 text-[11px] text-slate-400 truncate max-w-[140px]">
+                  {qr.handle}
+                </p>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Lightbox Modal */}
+      {lightboxItem && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs no-print"
+          role="dialog"
+          aria-modal="true"
+          aria-label={lightboxItem.title}
+        >
+          <div className="relative w-full max-w-4xl overflow-hidden rounded-2xl border border-[#2B3449] bg-[#1D2435] shadow-2xl">
+            <button
+              type="button"
+              onClick={() => setLightboxItem(null)}
+              aria-label="Close project preview"
+              className="absolute right-4 top-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#161B26]/90 text-white hover:bg-[#161B26] border border-[#2B3449]"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="grid grid-cols-1 md:grid-cols-12">
+              <div className="bg-[#121722] md:col-span-7 flex items-center justify-center">
+                <img
+                  src={lightboxItem.imageUrl}
+                  alt={lightboxItem.title}
+                  className="max-h-[70vh] w-full object-contain"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+
+              <div className="flex flex-col justify-between p-6 md:col-span-5">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-xs text-slate-400">
+                    <span className="font-semibold text-amber-400">{lightboxItem.category}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>{lightboxItem.sourcePlatform}</span>
+                    <span aria-hidden="true">·</span>
+                    <span className="font-mono-tabular">{lightboxItem.year}</span>
+                  </div>
+
+                  <h3 className="font-display text-2xl font-semibold text-white">
+                    {lightboxItem.title}
+                  </h3>
+
+                  <p className="text-xs font-medium text-slate-400">
+                    Client: {lightboxItem.client}
+                  </p>
+
+                  <p className="text-sm leading-relaxed text-slate-300">
+                    {lightboxItem.description}
+                  </p>
+                </div>
+
+                <div className="mt-8 space-y-3 border-t border-[#2B3449] pt-4">
+                  <div className="flex items-center justify-between text-xs text-slate-400 font-mono-tabular">
+                    <span>{lightboxItem.views.toLocaleString('en-US')} views</span>
+                    <span>{lightboxItem.likes} likes</span>
+                  </div>
+                  <a
+                    href={lightboxItem.externalUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#F58220] px-4 py-2.5 text-xs font-semibold text-slate-950 hover:bg-amber-400"
+                  >
+                    <span>Open Project on {lightboxItem.sourcePlatform}</span>
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

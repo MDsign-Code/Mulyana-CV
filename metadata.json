@@ -1,0 +1,6 @@
+{
+  "name": "Mulyana D-Zign — Digital CV & Portfolio Analytics",
+  "description": "Mulyana's interactive digital CV portfolio with LinkedIn, Instagram & Behance integration, real-time visitor analytics, recruiter notifications, PDF/CSV export, and weekly email digests.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

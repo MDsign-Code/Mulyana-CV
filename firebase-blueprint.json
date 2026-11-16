@@ -1,0 +1,129 @@
+{
+  "entities": {
+    "ProfileSettings": {
+      "title": "ProfileSettings",
+      "description": "Publicly viewable Digital CV profile metadata and connected social integration configuration",
+      "type": "object",
+      "properties": {
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "fullName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "brandName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "headline": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "tagline": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "bio": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "location": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "yearsExperience": { "type": "number" },
+        "awardsCount": { "type": "number" },
+        "linkedinUrl": { "type": "string", "maxLength": 300 },
+        "behanceUrl": { "type": "string", "maxLength": 300 },
+        "instagramUrl": { "type": "string", "maxLength": 300 },
+        "autoSyncEnabled": { "type": "boolean" },
+        "lastSyncedAt": { "type": "string", "maxLength": 64 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerUid", "fullName", "brandName", "headline", "tagline", "bio", "createdAt", "updatedAt"]
+    },
+    "PortfolioItem": {
+      "title": "PortfolioItem",
+      "description": "Portfolio project synced from Behance, Instagram, LinkedIn, or local CV showcase",
+      "type": "object",
+      "properties": {
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "client": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "category": { "type": "string", "enum": ["Packaging", "Company Profile", "Booth & Exhibition", "Brochure & Print", "Branding & Logo"] },
+        "sourcePlatform": { "type": "string", "enum": ["CV Archive", "Behance", "Instagram", "LinkedIn"] },
+        "year": { "type": "string", "minLength": 4, "maxLength": 16 },
+        "description": { "type": "string", "minLength": 1, "maxLength": 1500 },
+        "imageUrl": { "type": "string", "maxLength": 500 },
+        "externalUrl": { "type": "string", "maxLength": 500 },
+        "views": { "type": "number" },
+        "likes": { "type": "number" },
+        "featured": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerUid", "title", "client", "category", "sourcePlatform", "year", "description", "createdAt", "updatedAt"]
+    },
+    "ProfileVisit": {
+      "title": "ProfileVisit",
+      "description": "Visitor analytics log recording profile views, referrer channel, visitor role, and engagement duration",
+      "type": "object",
+      "properties": {
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "visitorName": { "type": "string", "minLength": 1, "maxLength": 140 },
+        "visitorRole": { "type": "string", "enum": ["Recruiter", "Hiring Manager", "Creative Director", "Client", "Peer"] },
+        "company": { "type": "string", "minLength": 1, "maxLength": 140 },
+        "location": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "sourceChannel": { "type": "string", "enum": ["LinkedIn", "Behance", "Instagram", "Direct / QR", "Email Link"] },
+        "sectionViewed": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "durationSeconds": { "type": "number" },
+        "device": { "type": "string", "enum": ["Desktop", "Mobile", "Tablet"] },
+        "isRecruiter": { "type": "boolean" },
+        "visitDate": { "type": "string", "minLength": 10, "maxLength": 32 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerUid", "visitorName", "visitorRole", "company", "location", "sourceChannel", "sectionViewed", "durationSeconds", "device", "isRecruiter", "visitDate", "createdAt"]
+    },
+    "RecruiterAlert": {
+      "title": "RecruiterAlert",
+      "description": "Real-time notification triggered when a recruiter or hiring manager views the Digital CV profile",
+      "type": "object",
+      "properties": {
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "visitId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "visitorName": { "type": "string", "minLength": 1, "maxLength": 140 },
+        "visitorRole": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "company": { "type": "string", "minLength": 1, "maxLength": 140 },
+        "sourceChannel": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "sectionViewed": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerUid", "visitId", "visitorName", "visitorRole", "company", "sourceChannel", "sectionViewed", "isRead", "createdAt", "updatedAt"]
+    },
+    "DigestSettings": {
+      "title": "DigestSettings",
+      "description": "Weekly email activity summary configuration and delivery log metadata",
+      "type": "object",
+      "properties": {
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "recipientEmail": { "type": "string", "minLength": 3, "maxLength": 180 },
+        "enabled": { "type": "boolean" },
+        "dayOfWeek": { "type": "string", "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] },
+        "sendHour": { "type": "string", "minLength": 4, "maxLength": 16 },
+        "includeRecruiterLog": { "type": "boolean" },
+        "includeSocialSync": { "type": "boolean" },
+        "lastSentAt": { "type": "string", "maxLength": 64 },
+        "totalSent": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerUid", "recipientEmail", "enabled", "dayOfWeek", "sendHour", "includeRecruiterLog", "includeSocialSync", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/profile_settings/{profileId}": {
+      "schema": { "$ref": "#/entities/ProfileSettings" },
+      "description": "Publicly readable Digital CV profile settings and social connectors"
+    },
+    "/portfolio_items/{itemId}": {
+      "schema": { "$ref": "#/entities/PortfolioItem" },
+      "description": "Portfolio showcase items synced across CV Archive, Behance, Instagram, and LinkedIn"
+    },
+    "/profile_visits/{visitId}": {
+      "schema": { "$ref": "#/entities/ProfileVisit" },
+      "description": "Private visitor analytics log accessible only by verified owner/admin"
+    },
+    "/recruiter_alerts/{alertId}": {
+      "schema": { "$ref": "#/entities/RecruiterAlert" },
+      "description": "Real-time recruiter visit notifications accessible only by verified owner/admin"
+    },
+    "/digest_settings/{settingsId}": {
+      "schema": { "$ref": "#/entities/DigestSettings" },
+      "description": "Weekly email summary settings accessible only by verified owner/admin"
+    }
+  }
+}

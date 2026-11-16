@@ -1,0 +1,206 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function isAdminEmail() {
+      return isSignedIn() && isVerified() && request.auth.token.email == 'mulyana15.arthapro@gmail.com';
+    }
+
+    function isValidProfileSettings(data) {
+      return data.keys().hasAll(['ownerUid', 'fullName', 'brandName', 'headline', 'tagline', 'bio', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerUid', 'fullName', 'brandName', 'headline', 'tagline', 'bio', 'location', 'yearsExperience', 'awardsCount', 'linkedinUrl', 'behanceUrl', 'instagramUrl', 'autoSyncEnabled', 'lastSyncedAt', 'createdAt', 'updatedAt'])
+        && data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128
+        && data.fullName is string && data.fullName.size() >= 1 && data.fullName.size() <= 120
+        && data.brandName is string && data.brandName.size() >= 1 && data.brandName.size() <= 120
+        && data.headline is string && data.headline.size() >= 1 && data.headline.size() <= 160
+        && data.tagline is string && data.tagline.size() >= 1 && data.tagline.size() <= 200
+        && data.bio is string && data.bio.size() >= 1 && data.bio.size() <= 2000
+        && (!('location' in data) || (data.location is string && data.location.size() >= 1 && data.location.size() <= 120))
+        && (!('yearsExperience' in data) || (data.yearsExperience is number && data.yearsExperience >= 0 && data.yearsExperience <= 80))
+        && (!('awardsCount' in data) || (data.awardsCount is number && data.awardsCount >= 0 && data.awardsCount <= 10000))
+        && (!('linkedinUrl' in data) || (data.linkedinUrl is string && data.linkedinUrl.size() <= 300))
+        && (!('behanceUrl' in data) || (data.behanceUrl is string && data.behanceUrl.size() <= 300))
+        && (!('instagramUrl' in data) || (data.instagramUrl is string && data.instagramUrl.size() <= 300))
+        && (!('autoSyncEnabled' in data) || data.autoSyncEnabled is bool)
+        && (!('lastSyncedAt' in data) || (data.lastSyncedAt is string && data.lastSyncedAt.size() <= 64))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidPortfolioItem(data) {
+      return data.keys().hasAll(['ownerUid', 'title', 'client', 'category', 'sourcePlatform', 'year', 'description', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerUid', 'title', 'client', 'category', 'sourcePlatform', 'year', 'description', 'imageUrl', 'externalUrl', 'views', 'likes', 'featured', 'createdAt', 'updatedAt'])
+        && data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 160
+        && data.client is string && data.client.size() >= 1 && data.client.size() <= 120
+        && data.category is string && data.category in ['Packaging', 'Company Profile', 'Booth & Exhibition', 'Brochure & Print', 'Branding & Logo']
+        && data.sourcePlatform is string && data.sourcePlatform in ['CV Archive', 'Behance', 'Instagram', 'LinkedIn']
+        && data.year is string && data.year.size() >= 4 && data.year.size() <= 16
+        && data.description is string && data.description.size() >= 1 && data.description.size() <= 1500
+        && (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 500))
+        && (!('externalUrl' in data) || (data.externalUrl is string && data.externalUrl.size() <= 500))
+        && (!('views' in data) || (data.views is number && data.views >= 0 && data.views <= 10000000))
+        && (!('likes' in data) || (data.likes is number && data.likes >= 0 && data.likes <= 10000000))
+        && (!('featured' in data) || data.featured is bool)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidProfileVisit(data) {
+      return data.keys().hasAll(['ownerUid', 'visitorName', 'visitorRole', 'company', 'location', 'sourceChannel', 'sectionViewed', 'durationSeconds', 'device', 'isRecruiter', 'visitDate', 'createdAt'])
+        && data.keys().hasOnly(['ownerUid', 'visitorName', 'visitorRole', 'company', 'location', 'sourceChannel', 'sectionViewed', 'durationSeconds', 'device', 'isRecruiter', 'visitDate', 'createdAt'])
+        && data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128
+        && data.visitorName is string && data.visitorName.size() >= 1 && data.visitorName.size() <= 140
+        && data.visitorRole is string && data.visitorRole in ['Recruiter', 'Hiring Manager', 'Creative Director', 'Client', 'Peer']
+        && data.company is string && data.company.size() >= 1 && data.company.size() <= 140
+        && data.location is string && data.location.size() >= 1 && data.location.size() <= 120
+        && data.sourceChannel is string && data.sourceChannel in ['LinkedIn', 'Behance', 'Instagram', 'Direct / QR', 'Email Link']
+        && data.sectionViewed is string && data.sectionViewed.size() >= 1 && data.sectionViewed.size() <= 120
+        && data.durationSeconds is number && data.durationSeconds >= 0 && data.durationSeconds <= 86400
+        && data.device is string && data.device in ['Desktop', 'Mobile', 'Tablet']
+        && data.isRecruiter is bool
+        && data.visitDate is string && data.visitDate.size() >= 10 && data.visitDate.size() <= 32
+        && data.createdAt is timestamp;
+    }
+
+    function isValidRecruiterAlert(data) {
+      return data.keys().hasAll(['ownerUid', 'visitId', 'visitorName', 'visitorRole', 'company', 'sourceChannel', 'sectionViewed', 'isRead', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerUid', 'visitId', 'visitorName', 'visitorRole', 'company', 'sourceChannel', 'sectionViewed', 'isRead', 'createdAt', 'updatedAt'])
+        && data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128
+        && data.visitId is string && data.visitId.size() >= 1 && data.visitId.size() <= 128
+        && data.visitorName is string && data.visitorName.size() >= 1 && data.visitorName.size() <= 140
+        && data.visitorRole is string && data.visitorRole.size() >= 1 && data.visitorRole.size() <= 80
+        && data.company is string && data.company.size() >= 1 && data.company.size() <= 140
+        && data.sourceChannel is string && data.sourceChannel.size() >= 1 && data.sourceChannel.size() <= 64
+        && data.sectionViewed is string && data.sectionViewed.size() >= 1 && data.sectionViewed.size() <= 120
+        && data.isRead is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidDigestSettings(data) {
+      return data.keys().hasAll(['ownerUid', 'recipientEmail', 'enabled', 'dayOfWeek', 'sendHour', 'includeRecruiterLog', 'includeSocialSync', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerUid', 'recipientEmail', 'enabled', 'dayOfWeek', 'sendHour', 'includeRecruiterLog', 'includeSocialSync', 'lastSentAt', 'totalSent', 'createdAt', 'updatedAt'])
+        && data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128
+        && data.recipientEmail is string && data.recipientEmail.size() >= 3 && data.recipientEmail.size() <= 180
+        && data.enabled is bool
+        && data.dayOfWeek is string && data.dayOfWeek in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        && data.sendHour is string && data.sendHour.size() >= 4 && data.sendHour.size() <= 16
+        && data.includeRecruiterLog is bool
+        && data.includeSocialSync is bool
+        && (!('lastSentAt' in data) || (data.lastSentAt is string && data.lastSentAt.size() <= 64))
+        && (!('totalSent' in data) || (data.totalSent is number && data.totalSent >= 0 && data.totalSent <= 100000))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // Public CV profile settings (readable publicly without login, writable only by verified Admin)
+    match /profile_settings/{profileId} {
+      allow get: if isValidId(profileId);
+      allow list: if true;
+      allow create: if isAdminEmail() && isValidId(profileId)
+        && isValidProfileSettings(incoming())
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isAdminEmail() && isValidId(profileId)
+        && isValidProfileSettings(incoming())
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['fullName', 'brandName', 'headline', 'tagline', 'bio', 'location', 'yearsExperience', 'awardsCount', 'linkedinUrl', 'behanceUrl', 'instagramUrl', 'autoSyncEnabled', 'lastSyncedAt', 'updatedAt']);
+      allow delete: if false;
+    }
+
+    // Public portfolio gallery (readable publicly without login, writable only by verified Admin)
+    match /portfolio_items/{itemId} {
+      allow get: if isValidId(itemId);
+      allow list: if true;
+      allow create: if isAdminEmail() && isValidId(itemId)
+        && isValidPortfolioItem(incoming())
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isAdminEmail() && isValidId(itemId)
+        && isValidPortfolioItem(incoming())
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'client', 'category', 'sourcePlatform', 'year', 'description', 'imageUrl', 'externalUrl', 'views', 'likes', 'featured', 'updatedAt']);
+      allow delete: if isAdminEmail() && isValidId(itemId);
+    }
+
+    // Admin-only private visitor analytics
+    match /profile_visits/{visitId} {
+      allow get: if isAdminEmail() && isValidId(visitId);
+      allow list: if isAdminEmail() && resource.data.ownerUid == request.auth.uid;
+      allow create: if isAdminEmail() && isValidId(visitId)
+        && isValidProfileVisit(incoming())
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isAdminEmail() && isValidId(visitId);
+    }
+
+    // Admin-only real-time recruiter alerts
+    match /recruiter_alerts/{alertId} {
+      allow get: if isAdminEmail() && isValidId(alertId);
+      allow list: if isAdminEmail() && resource.data.ownerUid == request.auth.uid;
+      allow create: if isAdminEmail() && isValidId(alertId)
+        && isValidRecruiterAlert(incoming())
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isAdminEmail() && isValidId(alertId)
+        && isValidRecruiterAlert(incoming())
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().visitId == existing().visitId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['isRead', 'updatedAt']);
+      allow delete: if isAdminEmail() && isValidId(alertId);
+    }
+
+    // Admin-only weekly email digest settings
+    match /digest_settings/{settingsId} {
+      allow get: if isAdminEmail() && isValidId(settingsId);
+      allow list: if isAdminEmail() && resource.data.ownerUid == request.auth.uid;
+      allow create: if isAdminEmail() && isValidId(settingsId)
+        && isValidDigestSettings(incoming())
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isAdminEmail() && isValidId(settingsId)
+        && isValidDigestSettings(incoming())
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['recipientEmail', 'enabled', 'dayOfWeek', 'sendHour', 'includeRecruiterLog', 'includeSocialSync', 'lastSentAt', 'totalSent', 'updatedAt']);
+      allow delete: if false;
+    }
+  }
+}
