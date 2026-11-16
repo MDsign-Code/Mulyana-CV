@@ -19,7 +19,7 @@ function detectAdminModeFromUrl(): boolean {
   if (typeof window === 'undefined') return false;
   const params = new URLSearchParams(window.location.search);
   return (
-    window.location.pathname === '/admin' ||
+    window.location.pathname.endsWith('/admin') ||
     params.get('mode') === 'admin'
   );
 }
@@ -226,13 +226,15 @@ export default function App() {
   }, []);
 
   const enterAdminMode = () => {
-    window.history.pushState({}, '', '/?mode=admin');
+    const basePath = import.meta.env.BASE_URL || '/';
+    window.history.pushState({}, '', `${basePath}?mode=admin`);
     setIsAdminMode(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const exitAdminMode = () => {
-    window.history.pushState({}, '', '/');
+    const basePath = import.meta.env.BASE_URL || '/';
+    window.history.pushState({}, '', basePath);
     setIsAdminMode(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };

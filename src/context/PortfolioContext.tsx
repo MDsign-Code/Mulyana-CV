@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore';
 import { auth, db, googleProvider, handleFirestoreError, testFirestoreConnection } from '../firebase';
 import {
+  assetUrl,
   DEFAULT_DIGEST_SETTINGS,
   DEFAULT_PORTFOLIO_ITEMS,
   DEFAULT_PROFILE_SETTINGS,
@@ -249,7 +250,7 @@ export const PortfolioProvider: React.FC<{
                 (d.sourcePlatform as PortfolioItemData['sourcePlatform']) || 'CV Archive',
               year: String(d.year || '2024'),
               description: String(d.description || ''),
-              imageUrl: String(d.imageUrl || '/assets/portfolio/work_algoplay_packaging.png'),
+              imageUrl: assetUrl(String(d.imageUrl || '/assets/portfolio/work_algoplay_packaging.png')),
               externalUrl: String(d.externalUrl || ''),
               views: Number(d.views || 0),
               likes: Number(d.likes || 0),
@@ -328,50 +329,60 @@ export const PortfolioProvider: React.FC<{
   useEffect(() => {
     if (!isAdminMode || !isAuthorizedAdmin) return;
 
-    const evtSource = new EventSource('/api/events');
+    let cancelled = false;
+    let evtSource: EventSource | null = null;
 
-    evtSource.addEventListener('visit', (event) => {
-      try {
-        const visit = JSON.parse((event as MessageEvent).data) as ProfileVisitData;
-        setVisits((prev) => {
-          if (prev.some((v) => v.id === visit.id)) return prev;
-          return [visit, ...prev];
+    fetch('/api/health')
+      .then((res) => {
+        const ct = res.headers.get('content-type') || '';
+        if (!res.ok || !ct.includes('application/json') || cancelled) return;
+        evtSource = new EventSource('/api/events');
+
+        evtSource.addEventListener('visit', (event) => {
+          try {
+            const visit = JSON.parse((event as MessageEvent).data) as ProfileVisitData;
+            setVisits((prev) => {
+              if (prev.some((v) => v.id === visit.id)) return prev;
+              return [visit, ...prev];
+            });
+          } catch {
+            // Ignore parse error
+          }
         });
-      } catch {
-        // Ignore parse error
-      }
-    });
 
-    evtSource.addEventListener('recruiter_alert', (event) => {
-      try {
-        const alert = JSON.parse((event as MessageEvent).data) as RecruiterAlertData;
-        setAlerts((prev) => {
-          if (prev.some((a) => a.id === alert.id)) return prev;
-          return [alert, ...prev];
+        evtSource.addEventListener('recruiter_alert', (event) => {
+          try {
+            const alert = JSON.parse((event as MessageEvent).data) as RecruiterAlertData;
+            setAlerts((prev) => {
+              if (prev.some((a) => a.id === alert.id)) return prev;
+              return [alert, ...prev];
+            });
+            setLatestToastAlert(alert);
+            if (soundEnabled) playNotificationChime();
+          } catch {
+            // Ignore parse error
+          }
         });
-        setLatestToastAlert(alert);
-        if (soundEnabled) playNotificationChime();
-      } catch {
-        // Ignore parse error
-      }
-    });
 
-    evtSource.addEventListener('social_sync', (event) => {
-      try {
-        const payload = JSON.parse((event as MessageEvent).data) as {
-          syncedAt: string;
-          platforms: SocialPlatformStatus[];
-        };
-        if (Array.isArray(payload.platforms)) {
-          setSocialStatuses(payload.platforms);
-        }
-      } catch {
-        // Ignore parse error
-      }
-    });
+        evtSource.addEventListener('social_sync', (event) => {
+          try {
+            const payload = JSON.parse((event as MessageEvent).data) as {
+              syncedAt: string;
+              platforms: SocialPlatformStatus[];
+            };
+            if (Array.isArray(payload.platforms)) {
+              setSocialStatuses(payload.platforms);
+            }
+          } catch {
+            // Ignore parse error
+          }
+        });
+      })
+      .catch(() => {});
 
     return () => {
-      evtSource.close();
+      cancelled = true;
+      evtSource?.close();
     };
   }, [isAdminMode, isAuthorizedAdmin, soundEnabled]);
 

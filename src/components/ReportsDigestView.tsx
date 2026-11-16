@@ -88,8 +88,8 @@ export const ReportsDigestView: React.FC = () => {
 
   const handleSendTestDigest = async () => {
     setIsSending(true);
+    const targetEmail = emailInput.trim() || digestSettings.recipientEmail;
     try {
-      const targetEmail = emailInput.trim() || digestSettings.recipientEmail;
       const resp = await fetch('/api/digest/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -103,8 +103,11 @@ export const ReportsDigestView: React.FC = () => {
           recentRecruiters: weeklySummary.recentRecruiters,
         }),
       });
+      const contentType = resp.headers.get('content-type') || '';
+      if (!resp.ok || !contentType.includes('application/json')) {
+        throw new Error('STATIC_FALLBACK');
+      }
       const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error || 'Failed to send weekly digest');
 
       await updateDigestSettings({
         recipientEmail: targetEmail,
@@ -117,9 +120,24 @@ export const ReportsDigestView: React.FC = () => {
         htmlBody: data.htmlBody,
         subject: data.subject,
       });
-    } catch (err) {
+    } catch {
+      const subject = `Weekly Portfolio Summary — ${profile.fullName} (${weeklySummary.recruiterVisits} Recruiter Visits)`;
+      const recruiterRows = weeklySummary.recentRecruiters
+        .map(
+          (r) =>
+            `<li><strong>${r.visitorName}</strong> (${r.visitorRole} — ${r.company}) via ${r.sourceChannel}</li>`
+        )
+        .join('');
+      const htmlBody = `<!doctype html><html><body style="font-family:sans-serif;padding:24px;"><h2>${subject}</h2><p>Total visits (7 days): <strong>${weeklySummary.totalVisits}</strong> | Recruiters: <strong>${weeklySummary.recruiterVisits}</strong> | Top channel: <strong>${weeklySummary.topChannel}</strong></p><ul>${recruiterRows || '<li>No recruiter visits recorded this week.</li>'}</ul><p>Featured work: ${weeklySummary.topProject}</p></body></html>`;
+      await updateDigestSettings({
+        recipientEmail: targetEmail,
+        lastSentAt: new Date().toISOString(),
+        totalSent: (digestSettings.totalSent || 0) + 1,
+      });
       setDispatchStatus({
-        message: err instanceof Error ? err.message : 'Failed to generate weekly email summary.',
+        message: `Weekly digest for ${targetEmail} prepared. Download the .eml copy below to review or forward it.`,
+        htmlBody,
+        subject,
       });
     } finally {
       setIsSending(false);

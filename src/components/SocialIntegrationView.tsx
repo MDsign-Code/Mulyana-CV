@@ -29,8 +29,11 @@ export const SocialIntegrationView: React.FC = () => {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [addedTitles, setAddedTitles] = useState<Set<string>>(new Set());
 
+  const basePath = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
   const appOrigin =
-    typeof window !== 'undefined' ? window.location.origin : 'https://mulyana-dzign.app';
+    typeof window !== 'undefined'
+      ? `${window.location.origin}${basePath}`
+      : 'https://mulyana-dzign.app';
 
   const handleSyncNow = async (e: React.FormEvent) => {
     e.preventDefault();

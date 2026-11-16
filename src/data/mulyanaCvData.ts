@@ -10,14 +10,22 @@ import type {
 
 export const OWNER_DEFAULT_UID = 'mulyana-dzign-owner';
 
+export function assetUrl(path: string): string {
+  if (!path) return path;
+  if (/^(https?:|data:|blob:)/i.test(path)) return path;
+  const base = import.meta.env.BASE_URL || '/';
+  const cleanBase = base.endsWith('/') ? base : `${base}/`;
+  return `${cleanBase}${path.replace(/^\/+/, '')}`;
+}
+
 export const MULYANA_CONTACT = {
   phone: '+62-89619774464',
   whatsapp: 'https://wa.me/6289619774464',
   email: 'mulyana983@gmail.com',
   accountEmail: 'mulyana15.arthapro@gmail.com',
-  originalCvPdfUrl: '/assets/aistudio/Mulyana_CV_c792d426.pdf',
-  portraitUrl: '/assets/portfolio/mulyana_portrait.png',
-  logoUrl: '/assets/portfolio/mulyana_logo.png',
+  originalCvPdfUrl: assetUrl('/assets/aistudio/Mulyana_CV_c792d426.pdf'),
+  portraitUrl: assetUrl('/assets/portfolio/mulyana_portrait.png'),
+  logoUrl: assetUrl('/assets/portfolio/mulyana_logo.png'),
 };
 
 export const DEFAULT_PROFILE_SETTINGS: ProfileSettingsData = {
@@ -136,7 +144,7 @@ export const DEFAULT_PORTFOLIO_ITEMS: PortfolioItemData[] = [
     year: '2024',
     description:
       'Front-and-back pouch packaging design for a premium seaweed facial mask. Combines clean botanical illustration, multilingual product claims hierarchy, and 3D marble presentation.',
-    imageUrl: '/assets/portfolio/work_algoplay_packaging.png',
+    imageUrl: assetUrl('/assets/portfolio/work_algoplay_packaging.png'),
     externalUrl: 'https://www.behance.net/md_dzign',
     views: 1420,
     likes: 184,
@@ -152,7 +160,7 @@ export const DEFAULT_PORTFOLIO_ITEMS: PortfolioItemData[] = [
     year: '2024',
     description:
       'Multi-page corporate profile and pitch deck for a car park enforcement and operations firm in Northern Ireland, featuring modular infographics and bold red-navy typography.',
-    imageUrl: '/assets/portfolio/work_cps_profile.png',
+    imageUrl: assetUrl('/assets/portfolio/work_cps_profile.png'),
     externalUrl: 'https://www.linkedin.com/in/mulyanadesign',
     views: 980,
     likes: 112,
@@ -168,7 +176,7 @@ export const DEFAULT_PORTFOLIO_ITEMS: PortfolioItemData[] = [
     year: '2023',
     description:
       'Modular trade exhibition booth concept, roll-up banners, and product specification wall panels for European medical hearing systems.',
-    imageUrl: '/assets/portfolio/work_kochrian_booth.png',
+    imageUrl: assetUrl('/assets/portfolio/work_kochrian_booth.png'),
     externalUrl: 'https://www.behance.net/md_dzign',
     views: 845,
     likes: 96,
@@ -184,7 +192,7 @@ export const DEFAULT_PORTFOLIO_ITEMS: PortfolioItemData[] = [
     year: '2024',
     description:
       'Full-color retail carton box packaging featuring playful astronaut character art, interior lid storytelling, and high-visibility shelf typography.',
-    imageUrl: '/assets/portfolio/work_baby_packaging.png',
+    imageUrl: assetUrl('/assets/portfolio/work_baby_packaging.png'),
     externalUrl: 'https://www.instagram.com/mulya_dzign',
     views: 1680,
     likes: 231,
@@ -200,7 +208,7 @@ export const DEFAULT_PORTFOLIO_ITEMS: PortfolioItemData[] = [
     year: '2023',
     description:
       'Tri-fold corporate brochure for landscape contractors combining curved photo masks, aerial site photography, and crisp green-and-slate editorial grids.',
-    imageUrl: '/assets/portfolio/work_scapes_brochure.png',
+    imageUrl: assetUrl('/assets/portfolio/work_scapes_brochure.png'),
     externalUrl: 'https://www.behance.net/md_dzign',
     views: 730,
     likes: 88,
