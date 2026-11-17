@@ -3,6 +3,7 @@ import type { User } from 'firebase/auth';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 import {
   collection,
+  deleteDoc,
   doc,
   limit,
   onSnapshot,
@@ -52,6 +53,12 @@ interface PortfolioContextValue {
   updateProfileSettings: (partial: Partial<ProfileSettingsData>) => Promise<void>;
   portfolioItems: PortfolioItemData[];
   addPortfolioItem: (item: Omit<PortfolioItemData, 'id' | 'ownerUid'>) => Promise<void>;
+  updatePortfolioItem: (
+    id: string,
+    partial: Partial<Omit<PortfolioItemData, 'id' | 'ownerUid'>>
+  ) => Promise<void>;
+  deletePortfolioItem: (id: string) => Promise<void>;
+  syncDefaultPortfolioItems: () => Promise<number>;
   visits: ProfileVisitData[];
   alerts: RecruiterAlertData[];
   unreadAlertsCount: number;
@@ -235,28 +242,35 @@ export const PortfolioProvider: React.FC<{
     );
 
     const unsubPublicPortfolio = onSnapshot(
-      query(collection(db, 'portfolio_items'), limit(24)),
+      query(collection(db, 'portfolio_items'), limit(60)),
       (snap) => {
         if (!snap.empty) {
-          const items: PortfolioItemData[] = snap.docs.map((docSnap) => {
-            const d = docSnap.data();
-            return {
-              id: docSnap.id,
-              ownerUid: String(d.ownerUid || OWNER_DEFAULT_UID),
-              title: String(d.title || ''),
-              client: String(d.client || ''),
-              category: (d.category as PortfolioItemData['category']) || 'Packaging',
-              sourcePlatform:
-                (d.sourcePlatform as PortfolioItemData['sourcePlatform']) || 'CV Archive',
-              year: String(d.year || '2024'),
-              description: String(d.description || ''),
-              imageUrl: assetUrl(String(d.imageUrl || '/assets/portfolio/work_algoplay_packaging.png')),
-              externalUrl: String(d.externalUrl || ''),
-              views: Number(d.views || 0),
-              likes: Number(d.likes || 0),
-              featured: Boolean(d.featured),
-            };
-          });
+          const items: PortfolioItemData[] = snap.docs
+            .map((docSnap) => {
+              const d = docSnap.data();
+              return {
+                id: docSnap.id,
+                ownerUid: String(d.ownerUid || OWNER_DEFAULT_UID),
+                title: String(d.title || ''),
+                client: String(d.client || ''),
+                category: (d.category as PortfolioItemData['category']) || 'Packaging',
+                sourcePlatform:
+                  (d.sourcePlatform as PortfolioItemData['sourcePlatform']) || 'CV Archive',
+                year: String(d.year || '2024'),
+                description: String(d.description || ''),
+                imageUrl: assetUrl(
+                  String(d.imageUrl || '/assets/portfolio/work_algoplay_packaging.png')
+                ),
+                externalUrl: String(d.externalUrl || ''),
+                views: Number(d.views || 0),
+                likes: Number(d.likes || 0),
+                featured: Boolean(d.featured),
+              };
+            })
+            .sort((a, b) => {
+              if (a.featured !== b.featured) return a.featured ? -1 : 1;
+              return b.year.localeCompare(a.year);
+            });
           setPortfolioItems(items);
         }
       },
@@ -485,29 +499,42 @@ export const PortfolioProvider: React.FC<{
       }
 
       const existingPortfolioSnap = await getDocs(
-        query(collection(db, 'portfolio_items'), where('ownerUid', '==', uid), limit(1))
+        query(collection(db, 'portfolio_items'), where('ownerUid', '==', uid), limit(60))
       );
-      if (existingPortfolioSnap.empty) {
+      const syncFlagKey = `mulyana_gallery_v2_seeded_${uid}`;
+      const alreadySyncedV2 =
+        typeof window !== 'undefined' && localStorage.getItem(syncFlagKey) === '1';
+
+      if (existingPortfolioSnap.empty || !alreadySyncedV2) {
+        const existingTitles = new Set(
+          existingPortfolioSnap.docs.map((d) => String(d.data().title || '').toLowerCase())
+        );
         for (const item of DEFAULT_PORTFOLIO_ITEMS) {
+          if (existingTitles.has(item.title.toLowerCase())) continue;
           const itemDocId = `${uid.slice(0, 12)}_${item.id}`;
           batch.set(doc(db, 'portfolio_items', itemDocId), {
             ownerUid: uid,
-            title: item.title,
-            client: item.client,
+            title: item.title.slice(0, 160),
+            client: item.client.slice(0, 120),
             category: item.category,
             sourcePlatform: item.sourcePlatform,
-            year: item.year,
-            description: item.description,
-            imageUrl: item.imageUrl,
-            externalUrl: item.externalUrl,
+            year: item.year.slice(0, 16),
+            description: item.description.slice(0, 1500),
+            imageUrl: item.imageUrl.slice(0, 350000),
+            externalUrl: item.externalUrl.slice(0, 500),
             views: item.views,
             likes: item.likes,
             featured: item.featured,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           });
+          hasWrites = true;
         }
-        hasWrites = true;
+        try {
+          localStorage.setItem(syncFlagKey, '1');
+        } catch {
+          // Ignore storage errors
+        }
       }
 
       if (hasWrites) {
@@ -740,24 +767,41 @@ export const PortfolioProvider: React.FC<{
     async (item: Omit<PortfolioItemData, 'id' | 'ownerUid'>) => {
       const id = `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
       const ownerUid = user?.uid || OWNER_DEFAULT_UID;
-      const newItem: PortfolioItemData = { ...item, id, ownerUid };
+      const sanitizedTitle = (item.title.trim() || 'Untitled Project').slice(0, 160);
+      const sanitizedClient = (item.client.trim() || 'Independent Client').slice(0, 120);
+      const sanitizedYear = (item.year.trim() || String(new Date().getFullYear())).padEnd(4, '0').slice(0, 16);
+      const sanitizedDesc = (item.description.trim() || 'Design case study.').slice(0, 1500);
+      const sanitizedImage = item.imageUrl.slice(0, 350000);
+      const sanitizedExternal = item.externalUrl.slice(0, 500);
+
+      const newItem: PortfolioItemData = {
+        ...item,
+        id,
+        ownerUid,
+        title: sanitizedTitle,
+        client: sanitizedClient,
+        year: sanitizedYear,
+        description: sanitizedDesc,
+        imageUrl: sanitizedImage,
+        externalUrl: sanitizedExternal,
+      };
       setPortfolioItems((prev) => [newItem, ...prev]);
 
       if (user && isAuthorizedAdmin) {
         try {
           await setDoc(doc(db, 'portfolio_items', id), {
             ownerUid: user.uid,
-            title: newItem.title.slice(0, 160),
-            client: newItem.client.slice(0, 120),
+            title: sanitizedTitle,
+            client: sanitizedClient,
             category: newItem.category,
             sourcePlatform: newItem.sourcePlatform,
-            year: newItem.year.slice(0, 16),
-            description: newItem.description.slice(0, 1500),
-            imageUrl: newItem.imageUrl.slice(0, 500),
-            externalUrl: newItem.externalUrl.slice(0, 500),
-            views: newItem.views,
-            likes: newItem.likes,
-            featured: newItem.featured,
+            year: sanitizedYear,
+            description: sanitizedDesc,
+            imageUrl: sanitizedImage,
+            externalUrl: sanitizedExternal,
+            views: Math.max(0, Math.min(10000000, Number(newItem.views) || 0)),
+            likes: Math.max(0, Math.min(10000000, Number(newItem.likes) || 0)),
+            featured: Boolean(newItem.featured),
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           });
@@ -768,6 +812,112 @@ export const PortfolioProvider: React.FC<{
     },
     [user, isAuthorizedAdmin]
   );
+
+  const updatePortfolioItem = useCallback(
+    async (id: string, partial: Partial<Omit<PortfolioItemData, 'id' | 'ownerUid'>>) => {
+      const existingItem = portfolioItems.find((p) => p.id === id);
+      if (!existingItem) return;
+
+      const merged: PortfolioItemData = { ...existingItem, ...partial };
+      const sanitizedTitle = (merged.title.trim() || 'Untitled Project').slice(0, 160);
+      const sanitizedClient = (merged.client.trim() || 'Independent Client').slice(0, 120);
+      const sanitizedYear = (merged.year.trim() || String(new Date().getFullYear())).padEnd(4, '0').slice(0, 16);
+      const sanitizedDesc = (merged.description.trim() || 'Design case study.').slice(0, 1500);
+      const sanitizedImage = merged.imageUrl.slice(0, 350000);
+      const sanitizedExternal = merged.externalUrl.slice(0, 500);
+
+      setPortfolioItems((prev) =>
+        prev.map((p) =>
+          p.id === id
+            ? {
+                ...merged,
+                title: sanitizedTitle,
+                client: sanitizedClient,
+                year: sanitizedYear,
+                description: sanitizedDesc,
+                imageUrl: sanitizedImage,
+                externalUrl: sanitizedExternal,
+              }
+            : p
+        )
+      );
+
+      if (user && isAuthorizedAdmin) {
+        try {
+          await updateDoc(doc(db, 'portfolio_items', id), {
+            title: sanitizedTitle,
+            client: sanitizedClient,
+            category: merged.category,
+            sourcePlatform: merged.sourcePlatform,
+            year: sanitizedYear,
+            description: sanitizedDesc,
+            imageUrl: sanitizedImage,
+            externalUrl: sanitizedExternal,
+            views: Math.max(0, Math.min(10000000, Number(merged.views) || 0)),
+            likes: Math.max(0, Math.min(10000000, Number(merged.likes) || 0)),
+            featured: Boolean(merged.featured),
+            updatedAt: serverTimestamp(),
+          });
+        } catch (error) {
+          handleFirestoreError(error, OperationType.UPDATE, `portfolio_items/${id}`);
+        }
+      }
+    },
+    [portfolioItems, user, isAuthorizedAdmin]
+  );
+
+  const deletePortfolioItem = useCallback(
+    async (id: string) => {
+      setPortfolioItems((prev) => prev.filter((p) => p.id !== id));
+      if (user && isAuthorizedAdmin) {
+        try {
+          await deleteDoc(doc(db, 'portfolio_items', id));
+        } catch (error) {
+          handleFirestoreError(error, OperationType.DELETE, `portfolio_items/${id}`);
+        }
+      }
+    },
+    [user, isAuthorizedAdmin]
+  );
+
+  const syncDefaultPortfolioItems = useCallback(async (): Promise<number> => {
+    const existingTitles = new Set(portfolioItems.map((p) => p.title.toLowerCase()));
+    const missing = DEFAULT_PORTFOLIO_ITEMS.filter(
+      (item) => !existingTitles.has(item.title.toLowerCase())
+    );
+    if (missing.length === 0) return 0;
+
+    if (user && isAuthorizedAdmin) {
+      try {
+        const batch = writeBatch(db);
+        for (const item of missing) {
+          const itemDocId = `${user.uid.slice(0, 12)}_${item.id}`;
+          batch.set(doc(db, 'portfolio_items', itemDocId), {
+            ownerUid: user.uid,
+            title: item.title.slice(0, 160),
+            client: item.client.slice(0, 120),
+            category: item.category,
+            sourcePlatform: item.sourcePlatform,
+            year: item.year.slice(0, 16),
+            description: item.description.slice(0, 1500),
+            imageUrl: item.imageUrl.slice(0, 350000),
+            externalUrl: item.externalUrl.slice(0, 500),
+            views: item.views,
+            likes: item.likes,
+            featured: item.featured,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+        }
+        await batch.commit();
+      } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, 'portfolio_items');
+      }
+    } else {
+      setPortfolioItems((prev) => [...prev, ...missing]);
+    }
+    return missing.length;
+  }, [portfolioItems, user, isAuthorizedAdmin]);
 
   const markAlertAsRead = useCallback(
     async (alertId: string) => {
@@ -951,6 +1101,9 @@ export const PortfolioProvider: React.FC<{
     updateProfileSettings,
     portfolioItems,
     addPortfolioItem,
+    updatePortfolioItem,
+    deletePortfolioItem,
+    syncDefaultPortfolioItems,
     visits,
     alerts,
     unreadAlertsCount,

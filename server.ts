@@ -116,6 +116,19 @@ async function fetchPublicProfileMeta(url: string): Promise<{
   }
 }
 
+function classifyBehanceCategory(
+  title: string
+): 'Advertising' | 'Book Design' | 'Packaging' | 'Company Profile' | 'Booth & Exhibition' | 'Brochure & Print' | 'Branding & Logo' {
+  const t = title.toLowerCase();
+  if (/book|diary|cover|living|couples|kdp|epub/.test(t)) return 'Book Design';
+  if (/pouch|packaging|gummy|ice cream|sauce|label|box/.test(t)) return 'Packaging';
+  if (/presentation|deck|slide|company profile|profile/.test(t)) return 'Company Profile';
+  if (/booth|exhibition/.test(t)) return 'Booth & Exhibition';
+  if (/brochure|flyer|menu|trifold/.test(t)) return 'Brochure & Print';
+  if (/ad|campaign|banner|poster/.test(t)) return 'Advertising';
+  return 'Branding & Logo';
+}
+
 async function fetchBehanceRssProjects(username: string): Promise<
   Array<{
     title: string;
@@ -145,13 +158,13 @@ async function fetchBehanceRssProjects(username: string): Promise<
       imageUrl: string;
     }> = [];
     const itemMatches = xml.match(/<item>[\s\S]*?<\/item>/gi) || [];
-    for (const rawItem of itemMatches.slice(0, 4)) {
+    for (const rawItem of itemMatches.slice(0, 12)) {
       const titleMatch = rawItem.match(
         /<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>|<title>([\s\S]*?)<\/title>/i
       );
-      const linkMatch = rawItem.match(/<link>([\s\S]*?)<\/link>/i);
+      const linkMatch = rawItem.match(/<link>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/link>/i);
       const descMatch = rawItem.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/i);
-      const pubMatch = rawItem.match(/<pubDate>([\s\S]*?)<\/pubDate>/i);
+      const pubMatch = rawItem.match(/<pubDate>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/pubDate>/i);
       const rawDesc = descMatch?.[1] || '';
       const imgMatch = rawDesc.match(/<img[^>]+src=["']([^"']+)["']/i);
       const cleanDesc = rawDesc.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -160,7 +173,7 @@ async function fetchBehanceRssProjects(username: string): Promise<
         items.push({
           title,
           link: (linkMatch?.[1] || `https://www.behance.net/${username}`).trim(),
-          description: cleanDesc.slice(0, 280) || 'Latest portfolio project from Behance feed.',
+          description: cleanDesc.slice(0, 280) || `${title} — portfolio showcase by Mulyana D-Zign on Behance.`,
           pubDate: (pubMatch?.[1] || '').trim(),
           imageUrl: imgMatch?.[1] || '/assets/portfolio/work_algoplay_packaging.png',
         });
@@ -295,9 +308,9 @@ app.post('/api/social/sync', async (req: Request, res: Response) => {
       ? beRss.map((item) => ({
           title: item.title,
           client: 'Behance Showcase',
-          category: 'Branding & Logo' as const,
+          category: classifyBehanceCategory(item.title),
           sourcePlatform: 'Behance' as const,
-          year: item.pubDate ? String(new Date(item.pubDate).getFullYear() || 2025) : '2025',
+          year: item.pubDate ? String(new Date(item.pubDate).getFullYear() || 2026) : '2026',
           description: item.description,
           imageUrl: item.imageUrl,
           externalUrl: item.link,
@@ -375,6 +388,67 @@ app.post('/api/social/sync', async (req: Request, res: Response) => {
 
   broadcastSse('social_sync', { syncedAt, platforms: payload.platforms });
   res.json(payload);
+});
+
+app.post('/api/social/instagram-import', async (req: Request, res: Response) => {
+  const postUrl = String(req.body?.postUrl || '').trim();
+  if (!postUrl || !/^https?:\/\/(?:www\.)?instagram\.com\//i.test(postUrl)) {
+    res.status(400).json({
+      ok: false,
+      reason: 'invalid_url',
+      message: 'Please enter a valid Instagram post or profile URL (https://www.instagram.com/...).',
+    });
+    return;
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
+  try {
+    const resp = await fetch(postUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+        Accept: 'text/html,application/xhtml+xml',
+      },
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    const html = await resp.text();
+    const ogTitle = extractMetaTag(html, 'og:title');
+    const ogDescription = extractMetaTag(html, 'og:description');
+    const ogImage = extractMetaTag(html, 'og:image');
+
+    const isLoginWall =
+      !ogImage ||
+      /welcome back to instagram|sign in to check out/i.test(ogDescription || '');
+
+    if (isLoginWall) {
+      res.json({
+        ok: false,
+        reason: 'instagram_login_wall',
+        message:
+          'Instagram requires sign-in to read post media automatically. You can save/upload the image file directly from Instagram or sync your public Behance RSS feed below.',
+        externalUrl: postUrl,
+      });
+      return;
+    }
+
+    res.json({
+      ok: true,
+      title: (ogTitle || 'Instagram Studio Work').slice(0, 140),
+      description: (ogDescription || 'Featured artwork from @mulya_dzign on Instagram.').slice(0, 600),
+      imageUrl: ogImage,
+      externalUrl: postUrl,
+    });
+  } catch {
+    clearTimeout(timer);
+    res.json({
+      ok: false,
+      reason: 'instagram_unreachable',
+      message:
+        'Instagram blocked automated fetching. Upload the image directly or import from your Behance feed instead.',
+      externalUrl: postUrl,
+    });
+  }
 });
 
 app.post('/api/digest/send', async (req: Request, res: Response) => {

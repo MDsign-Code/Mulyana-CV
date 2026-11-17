@@ -1,7 +1,7 @@
 import React from 'react';
 import { Bell, Download, Menu, X } from 'lucide-react';
 
-export type AdminTab = 'analytics' | 'social' | 'reports' | 'cv';
+export type AdminTab = 'analytics' | 'gallery' | 'social' | 'reports' | 'cv';
 
 interface TopBarProps {
   isAdminMode: boolean;
@@ -18,11 +18,12 @@ const PUBLIC_NAV_LINKS: Array<{ href: string; label: string }> = [
   { href: '#profile', label: 'Profile' },
   { href: '#experience', label: 'Experience' },
   { href: '#skills', label: 'Skills' },
-  { href: '#portfolio', label: 'Portfolio' },
+  { href: '#portfolio', label: 'Work Gallery' },
 ];
 
 const ADMIN_NAV_ITEMS: Array<{ id: AdminTab; label: string }> = [
   { id: 'analytics', label: 'Analytics' },
+  { id: 'gallery', label: 'Gallery' },
   { id: 'social', label: 'Social Sync' },
   { id: 'reports', label: 'Reports & Email' },
   { id: 'cv', label: 'CV Preview' },

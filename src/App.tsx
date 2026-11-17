@@ -4,6 +4,7 @@ import { PortfolioProvider, usePortfolio } from './context/PortfolioContext';
 import { TopBar, type AdminTab } from './components/TopBar';
 import { DigitalCvView } from './components/DigitalCvView';
 import { AnalyticsDashboardView } from './components/AnalyticsDashboardView';
+import { GalleryManagerView } from './components/GalleryManagerView';
 import { SocialIntegrationView } from './components/SocialIntegrationView';
 import { ReportsDigestView } from './components/ReportsDigestView';
 import { RecruiterAlertDrawer } from './components/RecruiterAlertDrawer';
@@ -90,9 +91,12 @@ const AppShell: React.FC<{
         ) : (
           <>
             {activeAdminTab === 'analytics' && <AnalyticsDashboardView />}
+            {activeAdminTab === 'gallery' && <GalleryManagerView />}
             {activeAdminTab === 'social' && <SocialIntegrationView />}
             {activeAdminTab === 'reports' && <ReportsDigestView />}
-            {activeAdminTab === 'cv' && <DigitalCvView />}
+            {activeAdminTab === 'cv' && (
+              <DigitalCvView onOpenGalleryManager={() => setActiveAdminTab('gallery')} />
+            )}
           </>
         )}
       </main>

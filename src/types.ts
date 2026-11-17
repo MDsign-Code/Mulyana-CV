@@ -7,12 +7,17 @@ export enum OperationType {
   WRITE = 'write',
 }
 
-export type PortfolioCategory =
-  | 'Packaging'
-  | 'Company Profile'
-  | 'Booth & Exhibition'
-  | 'Brochure & Print'
-  | 'Branding & Logo';
+export const PORTFOLIO_CATEGORIES = [
+  'Advertising',
+  'Book Design',
+  'Packaging',
+  'Company Profile',
+  'Booth & Exhibition',
+  'Brochure & Print',
+  'Branding & Logo',
+] as const;
+
+export type PortfolioCategory = (typeof PORTFOLIO_CATEGORIES)[number];
 
 export type SocialPlatform = 'CV Archive' | 'Behance' | 'Instagram' | 'LinkedIn';
 

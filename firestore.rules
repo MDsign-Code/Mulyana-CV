@@ -57,11 +57,11 @@ service cloud.firestore {
         && data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128
         && data.title is string && data.title.size() >= 1 && data.title.size() <= 160
         && data.client is string && data.client.size() >= 1 && data.client.size() <= 120
-        && data.category is string && data.category in ['Packaging', 'Company Profile', 'Booth & Exhibition', 'Brochure & Print', 'Branding & Logo']
+        && data.category is string && data.category in ['Advertising', 'Book Design', 'Packaging', 'Company Profile', 'Booth & Exhibition', 'Brochure & Print', 'Branding & Logo']
         && data.sourcePlatform is string && data.sourcePlatform in ['CV Archive', 'Behance', 'Instagram', 'LinkedIn']
         && data.year is string && data.year.size() >= 4 && data.year.size() <= 16
         && data.description is string && data.description.size() >= 1 && data.description.size() <= 1500
-        && (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 500))
+        && (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 350000))
         && (!('externalUrl' in data) || (data.externalUrl is string && data.externalUrl.size() <= 500))
         && (!('views' in data) || (data.views is number && data.views >= 0 && data.views <= 10000000))
         && (!('likes' in data) || (data.likes is number && data.likes >= 0 && data.likes <= 10000000))
